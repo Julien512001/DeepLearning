@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 from mpl_toolkits.mplot3d import Axes3D
 import plotly.express as px
+from tqdm import tqdm
+
+from Test import predict
 
 class PerceptronCreator:
 
@@ -24,7 +27,9 @@ class PerceptronCreator:
         return A
     
     def log_loss(self,A, y):
-        return 1 / len(y) * np.sum(-y * np.log(A) - (1 - y) * np.log(1 - A))
+        epsilon = 1e-15
+        return 1 / len(y) * np.sum(-y * np.log(A + epsilon) - (1 - y) \
+             * np.log(1 - A + epsilon))
 
     def gradients(self,A, X, y):
         m = len(y)
@@ -48,30 +53,61 @@ class PerceptronCreator:
         return accuracy_score(y_true, y_pred)
 
 
-    def fit(self, X, y):
-        if(len(X) <= 1): 
+    def fit(self, X_train, y_train, X_test, y_test):
+        if(len(X_train) <= 1): 
             raise Exception("Sorry, scalars are not compatible with this model")
         global W
         global b
-        W,b = self.initialisation(X)
+        W,b = self.initialisation(X_train)
         
 
         
-        Loss = []
+        train_Loss = []
+        train_acc = []
+        test_Loss = []
+        test_acc = []
 
-        for i in range(self.n_iter):
-            A = self.model(X, W, b)
-            Loss.append(self.log_loss(A, y))
-            dW, db = self.gradients(A, X, y)
+        for i in tqdm(range(self.n_iter)):
+            A_train = self.model(X_train, W, b)
+            A_test = self.model(X_test, W, b)
+
+            if (i%10 == 0):
+                train_Loss.append(self.log_loss(A_train, y_train))
+                y_pred1 = self.predict(X_train)
+                train_acc.append(accuracy_score(y_train, y_pred1))
+
+                test_Loss.append(self.log_loss(A_test, y_test))
+                y_pred2 = self.predict(X_test)
+                test_acc.append(accuracy_score(y_test, y_pred2))
+
+            dW, db = self.gradients(A_train, X_train, y_train)
             W, b = self.update(dW, db, W, b, self.learning_rate)
             
         if (self.LossCurve):
-            plt.figure()
-            plt.plot(Loss)
+            plt.figure(figsize=(12,4))
+
+            plt.subplot(2,2,1)
+            plt.plot(train_Loss)
             plt.xlabel("iteration")
             plt.ylabel("error")
+
+            plt.subplot(2,2,2)
+            plt.plot(train_acc)
+            plt.xlabel("iteration")
+            plt.ylabel("Score")
+
+            plt.subplot(2,2,3)
+            plt.plot(test_Loss)
+            plt.xlabel("iteration")
+            plt.ylabel("Error")
+
+            plt.subplot(2,2,4)
+            plt.plot(test_acc)
+            plt.xlabel("iteration")
+            plt.ylabel("Score")
+
             
-        if (self.fit_curve and X.shape[1] == 2):
+        if (self.fit_curve and X_train.shape[1] == 2):
             plt.figure()
             plt.scatter(X[:,0], X[:,1], c=y.ravel(),cmap='magma')
             plt.xlabel('First feature')

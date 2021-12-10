@@ -17,6 +17,7 @@ y_train, y_test = y_train.reshape((y_train.shape[0], 1)), y_test.reshape((y_test
 P = PerceptronCreator(learning_rate=0.01, n_iter=1000, LossCurve=True, fit_curve=True)
 P.fit(X_train, y_train)
 W,b = P.get_params()
+print(W,b)
 
 
 y_pred = P.predict(X_test)
